@@ -12,4 +12,3 @@ async def welcome() -> dict:
 
 app.include_router(category.router)
 app.include_router(products.router)
-

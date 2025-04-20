@@ -7,10 +7,10 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 load_dotenv()
 
 engine = create_engine(
-    f"postgresql+psycopg://{os.environ.get('DB_USER')}:{os.environ.get('DB_PASS')}@{os.environ.get('DB_HOST')}/{os.environ.get('DB_NAME')}",
+    f"sqlite:///ecommerce.db",
     echo=True
 )
-session_local = sessionmaker(bind=engine)
+SessionLocal = sessionmaker(bind=engine)
 
 
 class Base(DeclarativeBase):
