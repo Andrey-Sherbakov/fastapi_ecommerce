@@ -14,7 +14,9 @@ class Product(Base):
     image_url = Column(String)
     stock = Column(Integer)
     category_id = Column(Integer, ForeignKey('categories.id'))
+    supplier_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     rating = Column(Float, default=0.0)
     is_active = Column(Boolean, default=True)
 
     category = relationship('Category', back_populates='products')
+    supplier = relationship('User', back_populates='products')
