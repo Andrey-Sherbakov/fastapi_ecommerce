@@ -7,6 +7,7 @@ from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.backend.db_depends import get_db
+from app.helpers.auth import get_current_user_payload, validate_user_is_admin
 from app.models import Category
 from app.schemas import CreateCategory
 
@@ -20,7 +21,10 @@ async def get_all_categories(db: Annotated[AsyncSession, Depends(get_db)]):
 
 
 @router.post('/', status_code=status.HTTP_201_CREATED)
-async def create_category(db: Annotated[AsyncSession, Depends(get_db)], category: CreateCategory):
+async def create_category(db: Annotated[AsyncSession, Depends(get_db)],
+                          category: CreateCategory, user_payload: Annotated[dict, Depends(get_current_user_payload)]):
+    validate_user_is_admin(user_payload)
+
     await db.execute(insert(Category).values(
         name=category.name,
         parent_id=category.parent_id,
@@ -35,7 +39,10 @@ async def create_category(db: Annotated[AsyncSession, Depends(get_db)], category
 
 @router.put('/{category_slug}')
 async def update_category(db: Annotated[AsyncSession, Depends(get_db)], category_slug: str,
-                          update_category: CreateCategory):
+                          update_category: CreateCategory,
+                          user_payload: Annotated[dict, Depends(get_current_user_payload)]):
+    validate_user_is_admin(user_payload)
+
     category = await db.scalar(select(Category).where(Category.slug == category_slug))
     if category is None:
         raise HTTPException(
@@ -56,7 +63,10 @@ async def update_category(db: Annotated[AsyncSession, Depends(get_db)], category
 
 
 @router.delete('/{category_slug}')
-async def delete_category(db: Annotated[AsyncSession, Depends(get_db)], category_slug: str):
+async def delete_category(db: Annotated[AsyncSession, Depends(get_db)], category_slug: str,
+                          user_payload: Annotated[dict, Depends(get_current_user_payload)]):
+    validate_user_is_admin(user_payload)
+
     category = await db.scalar(select(Category).where(Category.slug == category_slug, Category.is_active == True))
     if category is None:
         raise HTTPException(

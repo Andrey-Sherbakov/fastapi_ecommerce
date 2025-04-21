@@ -6,6 +6,7 @@ from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.backend.db_depends import get_db
+from app.helpers.auth import get_current_user_payload, validate_user_is_supplier, validate_user_is_supplier_for_product
 from app.models import Product, Category
 from app.schemas import CreateProduct
 
@@ -31,7 +32,10 @@ async def get_all_products(db: Annotated[AsyncSession, Depends(get_db)]):
 
 
 @router.post('/', status_code=status.HTTP_201_CREATED)
-async def create_product(db: Annotated[AsyncSession, Depends(get_db)], product: CreateProduct):
+async def create_product(db: Annotated[AsyncSession, Depends(get_db)],
+                         product: CreateProduct, user_payload: Annotated[dict, Depends(get_current_user_payload)]):
+    validate_user_is_supplier(user_payload)
+
     category = await db.scalar(select(Category).where(Category.id == product.category))
     if category is None:
         raise HTTPException(
@@ -47,6 +51,7 @@ async def create_product(db: Annotated[AsyncSession, Depends(get_db)], product: 
         image_url=product.image_url,
         stock=product.stock,
         category_id=product.category,
+        supplier_id=user_payload.get('id')
     ))
     await db.commit()
 
@@ -100,13 +105,16 @@ async def product_detail(db: Annotated[AsyncSession, Depends(get_db)], product_s
 
 
 @router.put('/{product_slug}')
-async def update_product(db: Annotated[AsyncSession, Depends(get_db)], product_slug: str, new_product: CreateProduct):
+async def update_product(db: Annotated[AsyncSession, Depends(get_db)], product_slug: str, new_product: CreateProduct,
+                         user_payload: Annotated[dict, Depends(get_current_user_payload)]):
     product = await db.scalar(select(Product).where(Product.slug == product_slug))
     if product is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='There is no product found'
         )
+
+    validate_user_is_supplier_for_product(user_payload, product)
 
     category = await db.scalar(select(Category).where(
         Category.slug == new_product.category,
@@ -135,13 +143,16 @@ async def update_product(db: Annotated[AsyncSession, Depends(get_db)], product_s
 
 
 @router.delete('/{product_slug}')
-async def delete_product(db: Annotated[AsyncSession, Depends(get_db)], product_slug: str):
+async def delete_product(db: Annotated[AsyncSession, Depends(get_db)], product_slug: str,
+                         user_payload: Annotated[dict, Depends(get_current_user_payload)]):
     product = await db.scalar(select(Product).where(Product.slug == product_slug, Product.is_active == True))
     if product is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='There is no product found'
         )
+
+    validate_user_is_supplier_for_product(user_payload, product)
 
     product.is_active = False
 

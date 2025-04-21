@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.routers import category, products, auth
+from app.routers import category, products, auth, permissions
 
 app = FastAPI(swagger_ui_parameters={'persistAuthorization': True})
 
@@ -13,3 +13,4 @@ async def welcome() -> dict:
 app.include_router(category.router)
 app.include_router(products.router)
 app.include_router(auth.router)
+app.include_router(permissions.router)
