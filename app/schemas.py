@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class CreateProduct(BaseModel):
@@ -25,4 +25,4 @@ class CreateUser(BaseModel):
 
 class CreateReview(BaseModel):
     comment: str | None = None
-    grade: float
+    grade: float = Field(ge=0, le=10)
