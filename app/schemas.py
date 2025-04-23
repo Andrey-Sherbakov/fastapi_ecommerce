@@ -21,3 +21,8 @@ class CreateUser(BaseModel):
     username: str
     email: EmailStr
     password: str
+
+
+class CreateReview(BaseModel):
+    comment: str | None = None
+    grade: float

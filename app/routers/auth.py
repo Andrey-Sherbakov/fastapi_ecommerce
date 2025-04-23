@@ -4,9 +4,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import insert
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.backend.db_depends import get_db
+from app.backend.db_depends import DbSessionDep
 from app.helpers.auth import get_current_user_payload, authenticate_user, create_access_token, bcrypt_context
 from app.models import User
 from app.schemas import CreateUser
@@ -15,9 +14,7 @@ router = APIRouter(prefix='/auth', tags=['auth'])
 
 
 @router.post('/token')
-async def login(
-        db: Annotated[AsyncSession, Depends(get_db)],
-        form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+async def login(db: DbSessionDep, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     user = await authenticate_user(db, form_data.username, form_data.password)
 
     token = await create_access_token(user.username, user.id, user.is_admin, user.is_supplier, user.is_customer,
@@ -30,7 +27,7 @@ async def login(
 
 
 @router.post('/', status_code=status.HTTP_201_CREATED)
-async def create_user(db: Annotated[AsyncSession, Depends(get_db)], new_user: CreateUser):
+async def create_user(db: DbSessionDep, new_user: CreateUser):
     await db.execute(insert(User).values(
         first_name=new_user.first_name,
         last_name=new_user.last_name,

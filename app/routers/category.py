@@ -1,13 +1,11 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter
 from fastapi import status
 from slugify import slugify
 from sqlalchemy import insert, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.backend.db_depends import get_db
-from app.helpers.auth import get_current_user_payload, validate_user_is_admin
+from app.backend.db_depends import DbSessionDep
+from app.helpers.auth import CurrUserPayloadDep, user_is_admin
+from app.helpers.review import get_object_or_404
 from app.models import Category
 from app.schemas import CreateCategory
 
@@ -15,22 +13,22 @@ router = APIRouter(prefix='/categories', tags=['category'])
 
 
 @router.get('/')
-async def get_all_categories(db: Annotated[AsyncSession, Depends(get_db)]):
-    categories = await db.scalars(select(Category).where(Category.is_active == True)).all()
-    return categories
+async def get_all_categories(db: DbSessionDep):
+    categories = await db.scalars(select(Category).where(Category.is_active == True))
+    return categories.all()
 
 
 @router.post('/', status_code=status.HTTP_201_CREATED)
-async def create_category(db: Annotated[AsyncSession, Depends(get_db)],
-                          category: CreateCategory, user_payload: Annotated[dict, Depends(get_current_user_payload)]):
-    validate_user_is_admin(user_payload)
-
+@user_is_admin
+async def create_category(db: DbSessionDep, category: CreateCategory, curr_user: CurrUserPayloadDep):
     await db.execute(insert(Category).values(
         name=category.name,
         parent_id=category.parent_id,
         slug=slugify(category.name)
     ))
+
     await db.commit()
+
     return {
         'status_code': status.HTTP_201_CREATED,
         'transaction': 'Successful'
@@ -38,17 +36,11 @@ async def create_category(db: Annotated[AsyncSession, Depends(get_db)],
 
 
 @router.put('/{category_slug}')
-async def update_category(db: Annotated[AsyncSession, Depends(get_db)], category_slug: str,
-                          update_category: CreateCategory,
-                          user_payload: Annotated[dict, Depends(get_current_user_payload)]):
-    validate_user_is_admin(user_payload)
-
-    category = await db.scalar(select(Category).where(Category.slug == category_slug))
-    if category is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='There is no such category'
-        )
+@user_is_admin
+async def update_category(db: DbSessionDep, category_slug: str, update_category: CreateCategory,
+                          curr_user: CurrUserPayloadDep):
+    category: Category = await get_object_or_404(db, select(Category).where(Category.slug == category_slug),
+                                                 'There is no such category')
 
     category.name = update_category.name
     category.slug = slugify(update_category.name)
@@ -63,16 +55,12 @@ async def update_category(db: Annotated[AsyncSession, Depends(get_db)], category
 
 
 @router.delete('/{category_slug}')
-async def delete_category(db: Annotated[AsyncSession, Depends(get_db)], category_slug: str,
-                          user_payload: Annotated[dict, Depends(get_current_user_payload)]):
-    validate_user_is_admin(user_payload)
-
-    category = await db.scalar(select(Category).where(Category.slug == category_slug, Category.is_active == True))
-    if category is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='There is no such category'
-        )
+@user_is_admin
+async def delete_category(db: DbSessionDep, category_slug: str, curr_user: CurrUserPayloadDep):
+    category = await get_object_or_404(
+        db, select(Category).where(Category.slug == category_slug, Category.is_active == True),
+        'There is no such category'
+    )
 
     category.is_active = False
 

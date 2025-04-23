@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta, datetime, timezone
+from functools import wraps
 from typing import Annotated
 
 import jwt
@@ -11,8 +12,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from app.backend.db_depends import get_db
-from app.models import User, Product
+from app.backend.db_depends import DbSessionDep
+from app.models import User
 
 load_dotenv()
 
@@ -24,7 +25,7 @@ bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/token')
 
 
-async def authenticate_user(db: Annotated[AsyncSession, Depends(get_db)], username: str, password: str):
+async def authenticate_user(db: DbSessionDep, username: str, password: str):
     user = await db.scalar(select(User).where(User.username == username))
     if not user or not bcrypt_context.verify(password, user.hashed_password) or user.is_active == False:
         raise HTTPException(
@@ -46,7 +47,6 @@ async def create_access_token(username: str, user_id: int, is_admin: bool,
         'exp': datetime.now(timezone.utc) + expires_delta
     }
 
-    payload['exp'] = int(payload['exp'].timestamp())
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -58,32 +58,11 @@ async def get_current_user_payload(token: Annotated[str, Depends(oauth2_scheme)]
         is_admin: bool | None = payload.get('is_admin')
         is_supplier: bool | None = payload.get('is_supplier')
         is_customer: bool | None = payload.get('is_customer')
-        expire: int | None = payload.get('exp')
 
         if username is None or user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail='Could not validate user'
-            )
-
-        if expire is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='No access token supplied'
-            )
-
-        if not isinstance(expire, int):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Invalid token format'
-            )
-
-        current_time = datetime.now(timezone.utc).timestamp()
-
-        if expire < current_time:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Token expired!'
             )
 
         return {
@@ -107,41 +86,76 @@ async def get_current_user_payload(token: Annotated[str, Depends(oauth2_scheme)]
         )
 
 
-def validate_user_is_admin(user: dict):
-    if not user.get('is_admin'):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have admin permission"
-        )
+CurrUserPayloadDep = Annotated[dict, Depends(get_current_user_payload)]
 
 
-def validate_user_is_supplier(user: dict):
-    if not (user.get('is_admin') or user.get('is_supplier')):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have supplier permission"
-        )
+async def get_user(db: AsyncSession, user_id: int) -> User:
+    user = await db.scalar(select(User).where(User.id == user_id))
 
-
-def validate_user_is_supplier_for_product(user: dict, product: Product | None):
-    if not (user.get('is_admin') or user.get('is_supplier')) or product.supplier_id != user.get('id'):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to use this method"
-        )
-
-
-def validate_user_is_customer(user: dict):
-    if not (user.get('is_admin') or user.get('is_customer')):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have customer permission"
-        )
-
-
-def validate_user_is_active(user: User | None):
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='User not found'
         )
+
+    return user
+
+
+def user_is_admin(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        user = kwargs.get('curr_user')
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Authentication required"
+            )
+
+        if not user.get('is_admin'):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have admin permission"
+            )
+        return await func(*args, **kwargs)
+
+    return wrapper
+
+
+def user_is_supplier(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        user = kwargs.get('curr_user')
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Authentication required"
+            )
+
+        if not (user.get('is_admin') or user.get('is_supplier')):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have supplier permission"
+            )
+        return await func(*args, **kwargs)
+
+    return wrapper
+
+
+def user_is_customer(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        user = kwargs.get('curr_user')
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Authentication required"
+            )
+
+        if not (user.get('is_admin') or user.get('is_customer')):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have customer permission"
+            )
+        return await func(*args, **kwargs)
+
+    return wrapper

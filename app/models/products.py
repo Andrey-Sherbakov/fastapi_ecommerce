@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 
 from app.backend.db import Base
@@ -6,6 +6,7 @@ from app.backend.db import Base
 
 class Product(Base):
     __tablename__ = 'products'
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100))
     slug = Column(String(100), unique=True, index=True)
@@ -20,3 +21,4 @@ class Product(Base):
 
     category = relationship('Category', back_populates='products')
     supplier = relationship('User', back_populates='products')
+    reviews = relationship('Review', back_populates='product')
