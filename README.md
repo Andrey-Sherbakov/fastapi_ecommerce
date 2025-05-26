@@ -62,7 +62,7 @@
 ## API
 
 После запуска документация доступна по адресу http://127.0.0.1:8000/docs/
-![api_screenshot]("https://drive.google.com/uc?id=12NK0NS9vbYMgWEyNZu-RFDBlpDRz9Q1y)
+![image](https://drive.google.com/uc?id=12NK0NS9vbYMgWEyNZu-RFDBlpDRz9Q1y)
 
 ## Структура проекта
 
