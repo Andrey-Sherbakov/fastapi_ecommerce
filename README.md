@@ -69,39 +69,39 @@
 ```
 .
 ├── app
-│     ├── backend
-│     │     ├── db.py
-│     │     └── db_depends.py
-│     ├── fixtures
-│     │     ├── categories.csv
-│     │     ├── db.dumb
-│     │     └── products.csv
-│     ├── helpers
-│     │     ├── auth.py
-│     │     └── review.py
-│     ├── migrations
-│     │     ├── versions
-│     │     │     └── ...
-│     │     ├── README
-│     │     ├── env.py
-│     │     └── script.py.mako
-│     ├── models
-│     │     ├── category.py
-│     │     ├── products.py
-│     │     ├── review.py
-│     │     └── user.py
-│     ├── routers
-│     │     ├── auth.py
-│     │     ├── category.py
-│     │     ├── permissions.py
-│     │     ├── products.py
-│     │     └── review.py
-│     ├── main.py
-│     ├── middleware.py
-│     └── schemas.py
+│   ├── backend
+│   │   ├── db.py
+│   │   └── db_depends.py
+│   ├── fixtures
+│   │   ├── categories.csv
+│   │   ├── db.dumb
+│   │   └── products.csv
+│   ├── helpers
+│   │   ├── auth.py
+│   │   └── review.py
+│   ├── migrations
+│   │   ├── versions
+│   │   │   └── ...
+│   │   ├── README
+│   │   ├── env.py
+│   │   └── script.py.mako
+│   ├── models
+│   │   ├── category.py
+│   │   ├── products.py
+│   │   ├── review.py
+│   │   └── user.py
+│   ├── routers
+│   │   ├── auth.py
+│   │   ├── category.py
+│   │   ├── permissions.py
+│   │   ├── products.py
+│   │   └── review.py
+│   ├── main.py
+│   ├── middleware.py
+│   └── schemas.py
 ├── nginx
-│     ├── Dockerfile
-│     └── fastapi_ecommerce.conf
+│   ├── Dockerfile
+│   └── fastapi_ecommerce.conf
 ├── .sample.env
 ├── Dockerfile
 ├── Dockerfile.prod
@@ -114,5 +114,6 @@
 └── requirements.txt
 ```
 
-## Лицензия
+## 📜 Лицензия
+
 Проект доступен под лицензией MIT.
