@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 
+from app.middleware import log_middleware
 from app.routers import category, products, auth, permissions, review
 
 app = FastAPI(swagger_ui_parameters={'persistAuthorization': True})
+
+app.middleware('http')(log_middleware)
 
 
 @app.get("/")
